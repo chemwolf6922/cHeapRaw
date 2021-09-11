@@ -160,8 +160,7 @@ export class Heap{
         }
         let node = this.#entry;
         const layers = 32 - Math.clz32(n);
-        for(let i=layers-2;i>0;i--)
-        {
+        for(let i=layers-2;i>0;i--){
             if(((n>>>i)&1)===0){
                 node = node?.left;
             }else{
