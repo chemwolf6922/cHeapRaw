@@ -12,24 +12,46 @@ bool compare_value(void* A,void* B)
 int main(int argc, char const *argv[])
 {
     heap_handle_t heap = heap_create(compare_value);
-    struct timeval now;
-    gettimeofday(&now,NULL);
-    long long start_ts = now.tv_sec*1000000 + now.tv_usec;
-    for(int i=0;i<1000000;i++)
+
+    for(int i=0;i<10;i++)
     {
-        heap_add(heap,(void*)random());
+        heap_add(heap,(void*)i);
     }
-    gettimeofday(&now,NULL);
-    long long now_ts = now.tv_sec*1000000 + now.tv_usec;
-    printf("%lld us\n",now_ts - start_ts);
-    start_ts = now_ts;
+    
+    void** dump = heap_dump(heap);
+    for(int i=0;i<heap_get_length(heap);i++)
+    {
+        printf("%d ",(int)dump[i]);
+    }
+    printf("\n");
+    heap_dump_free(dump);
+
+    heap_delete(heap,(void*)5);
+
+    dump = heap_dump(heap);
+    for(int i=0;i<heap_get_length(heap);i++)
+    {
+        printf("%d ",(int)dump[i]);
+    }
+    printf("\n");
+    heap_dump_free(dump);
+
+    heap_delete(heap,(void*)12);
+
+    dump = heap_dump(heap);
+    for(int i=0;i<heap_get_length(heap);i++)
+    {
+        printf("%d ",(int)dump[i]);
+    }
+    printf("\n");
+    heap_dump_free(dump);
+
+
     while(heap_get_length(heap)>0)
     {
         int v = (int)heap_pop(heap);
     }
-    gettimeofday(&now,NULL);
-    now_ts = now.tv_sec*1000000 + now.tv_usec;
-    printf("%lld us\n",now_ts - start_ts);
+
     heap_free(heap,NULL);
     return 0;
 }

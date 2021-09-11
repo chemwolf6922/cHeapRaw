@@ -13,9 +13,12 @@ heap_handle_t heap_create(heap_compare_t compare);
 // If free_value is NULL, no operation will be applied to the assigned value
 void heap_free(heap_handle_t handle,heap_free_value_t free_value);
 bool heap_add(heap_handle_t handle,void* value);
+// This operation will not free value, since value is known to the outside
+bool heap_delete(heap_handle_t handle,void* value);
 void* heap_pop(heap_handle_t handle);
 void* heap_get(heap_handle_t handle);
 int heap_get_length(heap_handle_t handle);
-
+void** heap_dump(heap_handle_t handle);
+void heap_dump_free(void** dump);
 
 #endif
