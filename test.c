@@ -13,28 +13,18 @@ int main(int argc, char const *argv[])
 {
     heap_handle_t heap = heap_create(compare_value);
 
-    for(int i=0;i<10;i++)
-    {
-        int* value = malloc(sizeof(int));
-        *value = i;
-        heap_add(heap,value);
-    }
-    
-    void** dump = heap_dump(heap);
-    for(int i=0;i<heap_get_length(heap);i++)
-    {
-        printf("%d ",*(int*)dump[i]);
-    }
-    printf("\n");
-    heap_dump_free(dump);
-
-
-    while(heap_get_length(heap)>0)
-    {
-        int* value = heap_pop(heap);
-        printf("%d\n",*value);
-        free(value);
-    }
+    int* value1 = malloc(sizeof(int));
+    int* value2 = malloc(sizeof(int));
+    int* value3 = malloc(sizeof(int));
+    *value1 = 1;
+    *value2 = 1;
+    *value3 = 1;
+    heap_add(heap,value1);
+    heap_add(heap,value2);
+    heap_add(heap,value3);
+    heap_delete(heap,value1);
+    heap_delete(heap,value2);
+    heap_delete(heap,value3);
 
     heap_free(heap,NULL);
     return 0;

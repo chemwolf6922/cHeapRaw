@@ -99,7 +99,8 @@ bool heap_delete(heap_handle_t handle,void* value)
         tail_top_node->left = NULL;
     else
         tail_top_node->right = NULL;
-    heap_adjust_forward(heap,node);
+    if(node != tail_node)
+        heap_adjust_forward(heap,node);
     return true;
 }
 
