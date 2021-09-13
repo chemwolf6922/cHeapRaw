@@ -70,6 +70,7 @@ bool heap_add(heap_handle_t handle,void* value)
         node->right = new_node;
     new_node->top = node;
     heap_adjust_backward(heap,new_node);
+    return true;
 }
 
 bool heap_delete(heap_handle_t handle,void* value)

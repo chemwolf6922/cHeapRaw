@@ -6,7 +6,7 @@
 
 bool compare_value(void* A,void* B)
 {
-    return (int)A > (int)B;
+    return *(int*)A > *(int*)B;
 }
 
 int main(int argc, char const *argv[])
@@ -15,33 +15,15 @@ int main(int argc, char const *argv[])
 
     for(int i=0;i<10;i++)
     {
-        heap_add(heap,(void*)i);
+        int* value = malloc(sizeof(int));
+        *value = i;
+        heap_add(heap,value);
     }
     
     void** dump = heap_dump(heap);
     for(int i=0;i<heap_get_length(heap);i++)
     {
-        printf("%d ",(int)dump[i]);
-    }
-    printf("\n");
-    heap_dump_free(dump);
-
-    heap_delete(heap,(void*)5);
-
-    dump = heap_dump(heap);
-    for(int i=0;i<heap_get_length(heap);i++)
-    {
-        printf("%d ",(int)dump[i]);
-    }
-    printf("\n");
-    heap_dump_free(dump);
-
-    heap_delete(heap,(void*)12);
-
-    dump = heap_dump(heap);
-    for(int i=0;i<heap_get_length(heap);i++)
-    {
-        printf("%d ",(int)dump[i]);
+        printf("%d ",*(int*)dump[i]);
     }
     printf("\n");
     heap_dump_free(dump);
@@ -49,7 +31,9 @@ int main(int argc, char const *argv[])
 
     while(heap_get_length(heap)>0)
     {
-        int v = (int)heap_pop(heap);
+        int* value = heap_pop(heap);
+        printf("%d\n",*value);
+        free(value);
     }
 
     heap_free(heap,NULL);

@@ -2,7 +2,7 @@ CC?=gcc
 AR?=ar
 BUILD_DIR?=$(shell pwd)/build/
 
-CFLAGS=-O3
+CFLAGS?=-O3
 LDFLAGS=
 LIBS=
 
