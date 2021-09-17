@@ -1,32 +1,24 @@
-CC?=gcc
-AR?=ar
-BUILD_DIR?=$(shell pwd)/build/
-
 CFLAGS?=-O3
-LDFLAGS=
-LIBS=
+CFLAGS+=-MMD -MP
+LDFLAGS?=
+LIB_SRC=heap.c
+STATIC_LIB=libheap.a
+TEST_SRC=test.c $(LIB_SRC)
 
-LIBSRCS=heap.c
-APPSRCS=test.c $(LIBSRCS)
+all:test lib
 
-all:$(BUILD_DIR)app lib
+test:$(patsubst %.c,%.o,$(TEST_SRC))
+	$(CC) $(LDFLAGS) -o $@ $^
 
-lib:$(BUILD_DIR)libheap.a
+lib:$(STATIC_LIB)
 
-$(BUILD_DIR)%.o:%.c $(BUILD_DIR)%.d | $(BUILD_DIR)
-	$(CC) -MT $@ -MMD -MP -MF $(BUILD_DIR)$*.d $(CFLAGS) -o $@ -c $<
+$(STATIC_LIB):$(patsubst %.c,%.o,$(LIB_SRC))
+	$(AR) -rcs -o $@ $^
 
-$(BUILD_DIR):
-	@mkdir -p $@
+%.o:%.c
+	$(CC) $(CFLAGS) -c $<
 
-$(BUILD_DIR)app:$(patsubst %.c,$(BUILD_DIR)%.o,$(APPSRCS))
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-$(BUILD_DIR)libheap.a:$(patsubst %.c,$(BUILD_DIR)%.o,$(LIBSRCS))
-	$(AR) -rcs -o $@ $^ $(LIBS)
-
-$(patsubst %.c,$(BUILD_DIR)%.d,$(APPSRCS)):
-include $(patsubst %.c,$(BUILD_DIR)%.d,$(APPSRCS))
+-include $(TEST_SRC:.c=.d)
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -f *.o *.d test $(STATIC_LIB) 

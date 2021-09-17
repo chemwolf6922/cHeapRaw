@@ -1,2 +1,6 @@
 /.vscode
 /build
+/*.d
+/*.o
+/test
+/libheap.a
