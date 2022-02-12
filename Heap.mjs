@@ -1,3 +1,4 @@
+// @ts-check
 class HeapNode{
     /**
      * @type {HeapNode}
@@ -13,7 +14,7 @@ class HeapNode{
     top = undefined;
     /**
      * 
-     * @param {Any} value 
+     * @param {any} value 
      */
     constructor(value) {
         this.value = value;   
@@ -52,7 +53,7 @@ export class Heap{
 
     /**
      * 
-     * @param {Any} value 
+     * @param {any} value 
      */
     add(value){
         let newNode = new HeapNode(value);
@@ -96,14 +97,14 @@ export class Heap{
     }
 
     /**
-     * @returns {Any}
+     * @returns {any}
      */
     get(){
         return this.#entry?.value;
     }
 
     /**
-     * @returns {Any}
+     * @returns {any}
      */
     pop(){
         const result = this.#entry?.value;
@@ -121,8 +122,12 @@ export class Heap{
         return result;
     }
 
-
-    #compare = ()=>{}
+    /**
+     * @param {any} A
+     * @param {any} B 
+     * @returns {boolean}
+     */
+    #compare = (A,B)=>undefined;
 
     /**
      * @param {HeapNode} node 
@@ -158,7 +163,7 @@ export class Heap{
                 targetNode = node.left;
             }
         }else if(node.left === undefined && node.right !== undefined){
-            if(this.#compare(node.node.right)){
+            if(this.#compare(node,node.right)){
                 targetNode = node.right;
             }
         }else if(node.left !== undefined && node.right !== undefined){
