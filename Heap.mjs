@@ -68,6 +68,34 @@ export class Heap{
     }
 
     /**
+     * @param {any} value 
+     */
+    delete(value){
+        let node = this.#findNode(this.#entry,value);
+        if(node === undefined){
+            return false;
+        }
+        if(this.#length === 1){
+            this.#entry = undefined;
+            this.#length --;
+            return true;
+        }
+        let tailTop = this.#getTop(this.#length);
+        let tailNode = tailTop.branch==='left'?tailTop.node.left:tailTop.node.right;
+        node.value = tailNode.value;
+        this.#length --;
+        if(tailTop.branch==='left'){
+            tailTop.node.left = undefined;
+        }else{
+            tailTop.node.right = undefined;
+        }
+        if(node !== tailNode){
+            this.#adjustForeward(node);
+        }
+        return true;
+    }
+
+    /**
      * @returns {Any}
      */
     get(){
@@ -93,7 +121,31 @@ export class Heap{
         return result;
     }
 
+
     #compare = ()=>{}
+
+    /**
+     * @param {HeapNode} node 
+     * @param {any} value 
+     * @returns {HeapNode|undefined} 
+     */
+    #findNode(node,value){
+        if(node === undefined){
+            return undefined;
+        }
+        if(node.value === value){
+            return node;
+        }
+        let left = this.#findNode(node.left,value);
+        if(left !== undefined){
+            return left;
+        }
+        let right = this.#findNode(node.right,value);
+        if(right !== undefined){
+            return right;
+        }
+        return undefined;
+    }
 
     /**
      * 
