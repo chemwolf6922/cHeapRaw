@@ -1,7 +1,5 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <sys/time.h>
 #include "heap.h"
 
 bool compare_value(void* A,void* B)
@@ -13,19 +11,30 @@ int main(int argc, char const *argv[])
 {
     heap_handle_t heap = heap_create(compare_value);
 
-    int* value1 = malloc(sizeof(int));
-    int* value2 = malloc(sizeof(int));
-    int* value3 = malloc(sizeof(int));
-    *value1 = 1;
-    *value2 = 1;
-    *value3 = 1;
-    heap_add(heap,value1);
-    heap_add(heap,value2);
-    heap_add(heap,value3);
-    heap_delete(heap,value1);
-    heap_delete(heap,value2);
-    heap_delete(heap,value3);
+    int v1 = 1;
+    int v2 = 10;
+    int v3 = 2;
+    int v4 = 11;
+    int v5 = 12;
+    int v6 = 4;
+    int v7 = 3;
+    heap_add(heap,&v1);
+    heap_add(heap,&v2);
+    heap_add(heap,&v3);
+    heap_add(heap,&v4);
+    heap_add(heap,&v5);
+    heap_add(heap,&v6);
+    heap_add(heap,&v7);
+    heap_delete(heap,&v4);
+    printf("%d\n",*(int*)heap_pop(heap));
+    printf("%d\n",*(int*)heap_pop(heap));
+    printf("%d\n",*(int*)heap_pop(heap));
+    printf("%d\n",*(int*)heap_pop(heap));
+    printf("%d\n",*(int*)heap_pop(heap));
+    printf("%d\n",*(int*)heap_pop(heap));
+    
 
     heap_free(heap,NULL);
+
     return 0;
 }

@@ -17,8 +17,8 @@ typedef struct{
 
 /* function predefines */
 heap_node_t* heap_get_top(heap_t* heap,int n,bool* is_left);
-void heap_adjust_backward(heap_t* heap,heap_node_t* node);
-void heap_adjust_forward(heap_t* heap,heap_node_t* node);
+heap_node_t* heap_adjust_backward(heap_t* heap,heap_node_t* node);
+heap_node_t* heap_adjust_forward(heap_t* heap,heap_node_t* node);
 void heap_free_node(heap_node_t* node,heap_free_value_t free_value);
 heap_node_t* heap_new_node(void* value);
 heap_node_t* heap_find_node(heap_node_t* node,void* value,bool* found);
@@ -100,7 +100,10 @@ bool heap_delete(heap_handle_t handle,void* value)
     else
         tail_top_node->right = NULL;
     if(node != tail_node)
+    {
+        node = heap_adjust_backward(heap,node);
         heap_adjust_forward(heap,node);
+    }  
     return true;
 }
 
@@ -194,20 +197,24 @@ heap_node_t* heap_get_top(heap_t* heap,int n,bool* is_left)
     return node;
 }
 
-void heap_adjust_backward(heap_t* heap,heap_node_t* node)
+heap_node_t* heap_adjust_backward(heap_t* heap,heap_node_t* node)
 {
     if(node->top == NULL)
-        return;
+        return node;
     if(heap->compare(node->top->value,node->value))
     {
         void* temp_value = node->value;
         node->value = node->top->value;
         node->top->value = temp_value;
-        heap_adjust_backward(heap,node->top);
+        return heap_adjust_backward(heap,node->top);
+    }
+    else
+    {
+        return node;
     }
 }
 
-void heap_adjust_forward(heap_t* heap,heap_node_t* node)
+heap_node_t* heap_adjust_forward(heap_t* heap,heap_node_t* node)
 {
     heap_node_t* target_node = NULL;
     if(node->left != NULL && node->right != NULL)
@@ -245,7 +252,11 @@ void heap_adjust_forward(heap_t* heap,heap_node_t* node)
         void* temp_value = node->value;
         node->value = target_node->value;
         target_node->value = temp_value;
-        heap_adjust_forward(heap,target_node);
+        return heap_adjust_forward(heap,target_node);
+    }
+    else
+    {
+        return node;
     }
 }
 
