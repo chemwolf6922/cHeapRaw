@@ -1,5 +1,5 @@
 CFLAGS?=-O3
-CFLAGS+=-MMD -MP
+override CFLAGS+=-MMD -MP
 LDFLAGS?=
 LIB_SRC=heap.c
 STATIC_LIB=libheap.a
