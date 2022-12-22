@@ -13,7 +13,7 @@ test:$(patsubst %.c,%.o,$(TEST_SRC))
 lib:$(STATIC_LIB)
 
 $(STATIC_LIB):$(patsubst %.c,%.o,$(LIB_SRC))
-	$(AR) -rcs -o $@ $^
+	$(AR) -rcs $@ $^
 
 %.o:%.c
 	$(CC) $(CFLAGS) -c $<
