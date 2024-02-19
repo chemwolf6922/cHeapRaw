@@ -31,9 +31,10 @@ static void heap_dump_node_chain(heap_node_t* node,void** dump,int* i);
 
 heap_handle_t heap_new(heap_compare_t compare, heap_set_pos_t set_pos, heap_get_pos_t get_pos)
 {
+    heap_t* heap = NULL;
     if(compare == NULL || set_pos == NULL || get_pos == NULL)
         goto error;
-    heap_t* heap = malloc(sizeof(heap_t));
+    heap = malloc(sizeof(heap_t));
     if(!heap)
         goto error;
     heap->compare = compare;
