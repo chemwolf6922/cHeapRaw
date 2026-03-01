@@ -3,29 +3,23 @@
 #include <stddef.h>
 #include <string.h>
 
-typedef struct heap_node_s{
-    void* value;
-    struct heap_node_s* left;
-    struct heap_node_s* right;
-    struct heap_node_s* top;
-}heap_node_t;
+#define HEAP_DEFAULT_CAPACITY (16)
+#define GET_PARENT_POS(pos) (((pos)-1)/2)
+#define GET_LEFT_CHILD_POS(pos) ((pos)*2+1)
+#define GET_RIGHT_CHILD_POS(pos) ((pos)*2+2)
 
 typedef struct{
-    struct heap_node_s* entry;
-    int length;
+    void** values;
+    size_t length;
+    size_t capacity;
     heap_compare_t compare;
     heap_set_pos_t set_pos;
     heap_get_pos_t get_pos;
 }heap_t;
 
 /* function predefines */
-static heap_node_t* heap_get_top(heap_t* heap,int n,bool* is_left);
-static heap_node_t* heap_adjust_backward(heap_t* heap,heap_node_t* node);
-static heap_node_t* heap_adjust_forward(heap_t* heap,heap_node_t* node);
-static inline void heap_free_single_node(heap_node_t* node,heap_free_value_t free_value, void* ctx);
-static heap_node_t* heap_new_node(void* value);
-static void heap_free_node_chain(heap_node_t* node,heap_free_value_t free_value,void* ctx);
-static void heap_dump_node_chain(heap_node_t* node,void** dump,int* i);
+static size_t heap_adjust_backward(heap_t* heap, size_t pos);
+static size_t heap_adjust_forward(heap_t* heap, size_t node);
 
 /* public functions */
 
@@ -37,15 +31,23 @@ heap_handle_t heap_new(heap_compare_t compare, heap_set_pos_t set_pos, heap_get_
     heap = malloc(sizeof(heap_t));
     if(!heap)
         goto error;
+    memset(heap,0,sizeof(heap_t));
     heap->compare = compare;
     heap->set_pos = set_pos;
     heap->get_pos = get_pos;
-    heap->entry = NULL;
     heap->length = 0;
+    heap->capacity = HEAP_DEFAULT_CAPACITY;
+    heap->values = malloc(sizeof(void*) * heap->capacity);
+    if (!heap->values)
+        goto error;
     return (heap_handle_t)heap;
 error:
     if(heap)
+    {
+        if (heap->values)
+            free(heap->values);
         free(heap);
+    }
     return NULL;
 }
 
@@ -54,86 +56,86 @@ void heap_free(heap_handle_t handle,heap_free_value_t free_value,void* ctx)
     heap_t* heap = (heap_t*)handle;
     if(heap)
     {
-        heap_free_node_chain(heap->entry,free_value,ctx);
+        if (heap->values)
+        {
+            for (size_t i = 0; i < heap->length; i++)
+            {
+                if (free_value)
+                    free_value(heap->values[i], ctx);
+            }
+            free(heap->values);
+        }
         free(heap);
     }
 }
 
 int heap_add(heap_handle_t handle,void* value)
 {
-    heap_node_t* new_node = NULL;
     heap_t* heap = (heap_t*)handle;
-    if(!heap)
-        goto error;
-    
-    new_node = heap_new_node(value);
-    if(!new_node)
-        goto error;
-    heap->set_pos(value,(heap_pos_t)new_node);
+    if (!heap || !value)
+        return -1;
 
-    if(heap->entry == NULL)
+    if (heap->length == heap->capacity)
     {
-        heap->entry = new_node;
-        heap->length ++;
+        size_t new_capacity = heap->capacity * 2;
+        void** new_values = realloc(heap->values, sizeof(void*) * new_capacity);
+        if (!new_values)
+            return -1;
+        heap->values = new_values;
+        heap->capacity = new_capacity;
     }
-    else
-    {
-        bool is_left;
-        heap_node_t* top_node = heap_get_top(heap,++heap->length,&is_left);
-        if(is_left)
-            top_node->left = new_node;
-        else
-            top_node->right = new_node;
-        new_node->top = top_node;
-        heap_adjust_backward(heap,new_node);
-    }
+
+    size_t pos = heap->length;
+    heap->length++;
+    heap->values[pos] = value;
+    heap->set_pos(value, pos);
+    heap_adjust_backward(heap, pos);
     return 0;
-error:
-    heap_free_single_node(new_node,NULL,NULL);
-    return -1;
 }
 
 int heap_delete(heap_handle_t handle,void* value)
 {
     heap_t* heap = (heap_t*)handle;
-    if(!heap)
-        goto error;
-    heap_node_t* node = heap->get_pos(value);
-    if(!node)
-        goto error;
+    if (!heap || !value)
+        return -1;
 
-    if(heap->length == 1)
+    size_t pos = heap->get_pos(value);
+    if (pos >= heap->length)
+        return -1;
+
+    if (heap->length == 1)
     {
-        heap_free_single_node(node,NULL,NULL);
-        heap->entry = NULL;
-        heap->length --;
-        goto finish;
+        heap->length--;
+        /** No need to reduce capacity, as capacity is already at minimum if length == 1 */
+        return 0;
     }
-    /** find tail node */
-    bool is_left;
-    heap_node_t* tail_top_node = heap_get_top(heap,heap->length,&is_left);
-    heap_node_t* tail_node = is_left?tail_top_node->left:tail_top_node->right;
-    /** move tail value to node */
-    node->value = tail_node->value;
-    heap->set_pos(node->value,(heap_pos_t)node);
-    /** free & detach tail node */
-    heap_free_single_node(tail_node,NULL,NULL);
-    heap->length --;
-    if(is_left)
-        tail_top_node->left = NULL;
-    else
-        tail_top_node->right = NULL;
-    /** adjust heap structure */
-    if(tail_node != node)
-    {
-        node = heap_adjust_backward(heap,node);
-        heap_adjust_forward(heap,node);
-    }  
 
-finish:
+    /** Reduce heap length */
+    heap->length--;
+    /** Fix heap structure if pos is not the old tail */
+    if (pos < heap->length)
+    {
+        /** Move old tail to node */
+        heap->values[pos] = heap->values[heap->length];
+        heap->set_pos(heap->values[pos], pos);
+        /** Adjust structure */
+        pos = heap_adjust_backward(heap, pos);
+        heap_adjust_forward(heap, pos);
+    }
+    /** Reduce heap capacity */
+    if (heap->length < heap->capacity / 4 && heap->capacity > HEAP_DEFAULT_CAPACITY)
+    {
+        size_t new_capacity = heap->capacity / 2;
+        if (new_capacity < HEAP_DEFAULT_CAPACITY)
+            new_capacity = HEAP_DEFAULT_CAPACITY;
+        void** new_values = realloc(heap->values, sizeof(void*) * new_capacity);
+        if (new_values)
+        {
+            heap->values = new_values;
+            heap->capacity = new_capacity;
+        }
+    }
     return 0;
-error:
-    return -1;
 }
 
 void* heap_pop(heap_handle_t handle)
@@ -141,48 +143,23 @@ void* heap_pop(heap_handle_t handle)
     heap_t* heap = (heap_t*)handle;
     if(!heap)
         return NULL;
-    void* result = NULL;
-    if(heap->entry != NULL)
-        result = heap->entry->value;
-    if(heap->length == 1)
-    {
-        heap->length--;
-        heap_free_single_node(heap->entry,NULL,NULL);
-        heap->entry = NULL;
-    }
-    else if(heap->length > 1)
-    {
-        bool is_left;
-        heap_node_t* tail_top_node = heap_get_top(heap,heap->length,&is_left);
-        heap_node_t* tail_node = is_left?tail_top_node->left:tail_top_node->right;
-        /** move tail value to entry */
-        heap->entry->value = tail_node->value;
-        heap->set_pos(heap->entry->value,heap->entry);
-        /** free and detach the tail node */
-        heap_free_single_node(tail_node,NULL,NULL);
-        if(is_left)
-            tail_top_node->left = NULL;
-        else
-            tail_top_node->right = NULL;
-        heap->length--;
-        /** adjust the new entry value */
-        heap_adjust_forward(heap,heap->entry);
-    }
+    if (heap->length == 0)
+        return NULL;
+
+    void* result = heap->values[0];
+    heap_delete(handle, result);
     return result;
-error:
-    return NULL;
 }
 
 void* heap_get(heap_handle_t handle)
 {
     heap_t* heap = (heap_t*)handle;
     if(!heap)
+        return NULL;    
+    if (heap->length == 0)
         return NULL;
-   
-    void* result = NULL;
-    if(heap->entry != NULL)
-        result = heap->entry->value;
-    return result;
+
+    return heap->values[0];
 }
 
 int heap_get_length(heap_handle_t handle)
@@ -194,158 +171,45 @@ int heap_get_length(heap_handle_t handle)
     return heap->length;
 }
 
-void** heap_dump(heap_handle_t handle)
-{
-    heap_t* heap = (heap_t*)handle;
-    if(!heap)
-        return NULL;
-   
-    if(heap->length == 0)
-        return NULL;
-    void** dump = malloc(sizeof(void*)*heap->length);
-    int i = 0;
-    heap_dump_node_chain(heap->entry,dump,&i);
-    return dump;
-}
-
-void heap_dump_free(void** dump)
-{
-    free(dump);
-}
-
 /* private functions */
-static heap_node_t* heap_get_top(heap_t* heap,int n,bool* is_left)
+
+static size_t heap_adjust_backward(heap_t* heap, size_t pos)
 {
-    if(n==1)
-        return NULL;
-    heap_node_t* node = heap->entry;
-    int layers = 32 - __builtin_clz(n);
-    for(int i=layers-2;i>0;i--)
-    {
-        if((n>>i)&1)
-        {
-            node = node->right;
-        }
-        else
-        {
-            node = node->left;
-        }
-    }
-    *is_left = !(n&1);
-    return node;
+    if (pos == 0)
+        return pos;
+    size_t top_pos = GET_PARENT_POS(pos);
+    if (heap->compare(heap->values[pos], heap->values[top_pos]))
+        return pos;
+    /** Flip pos and top_pos */
+    void* temp_value = heap->values[pos];
+    heap->values[pos] = heap->values[top_pos];
+    heap->values[top_pos] = temp_value;
+    heap->set_pos(heap->values[pos], pos);
+    heap->set_pos(heap->values[top_pos], top_pos);
+    return heap_adjust_backward(heap, top_pos);
 }
 
-static heap_node_t* heap_adjust_backward(heap_t* heap,heap_node_t* node)
+static size_t heap_adjust_forward(heap_t* heap, size_t pos)
 {
-    if(node->top == NULL)
-        return node;
-    if(heap->compare(node->top->value,node->value))
+    size_t left_pos = GET_LEFT_CHILD_POS(pos);
+    size_t right_pos = GET_RIGHT_CHILD_POS(pos);
+    size_t min_pos = pos;
+    if (left_pos < heap->length && heap->compare(heap->values[min_pos], heap->values[left_pos]))
     {
-        void* temp_value = node->value;
-        node->value = node->top->value;
-        node->top->value = temp_value;
-        heap->set_pos(node->value,(heap_pos_t)node);
-        heap->set_pos(node->top->value,(heap_pos_t)node->top);
-        return heap_adjust_backward(heap,node->top);
+        min_pos = left_pos;
     }
-    else
+    if (right_pos < heap->length && heap->compare(heap->values[min_pos], heap->values[right_pos]))
     {
-        return node;
+        min_pos = right_pos;
     }
-}
-
-static heap_node_t* heap_adjust_forward(heap_t* heap,heap_node_t* node)
-{
-    heap_node_t* target_node = NULL;
-    if(node->left != NULL && node->right != NULL)
-    {
-        heap_node_t* less_node = NULL;
-        if(heap->compare(node->left->value,node->right->value))
-        {
-            less_node = node->right;
-        }
-        else
-        {
-            less_node = node->left;
-        }
-        if(heap->compare(node->value,less_node->value))
-        {
-            target_node = less_node;
-        }
-    }
-    else if(node->left != NULL && node->right == NULL)
-    {
-        if(heap->compare(node->value,node->left->value))
-        {
-            target_node = node->left;
-        }
-    }
-    else if(node->left == NULL && node->right != NULL)
-    {
-        if(heap->compare(node->value,node->right->value))
-        {
-            target_node = node->right;
-        }
-    }
-    if(target_node != NULL)
-    {
-        void* temp_value = node->value;
-        node->value = target_node->value;
-        target_node->value = temp_value;
-        heap->set_pos(node->value,(heap_pos_t)node);
-        heap->set_pos(target_node->value,(heap_pos_t)target_node);
-        return heap_adjust_forward(heap,target_node);
-    }
-    else
-    {
-        return node;
-    }
-}
-
-
-
-static inline void heap_free_single_node(heap_node_t* node,heap_free_value_t free_value,void* ctx)
-{
-    if(node)
-    {
-        if(free_value)
-            free_value(node->value,ctx);
-        free(node);
-    } 
-}
-
-static heap_node_t* heap_new_node(void* value)
-{
-    heap_node_t* node = malloc(sizeof(heap_node_t));
-    if(!node)
-        return NULL;
-    node->left = NULL;
-    node->right = NULL;
-    node->top = NULL;
-    node->value = (void*)value;
-    return node;
-}
-
-static void heap_free_node_chain(heap_node_t* node,heap_free_value_t free_value,void* ctx)
-{
-    if(node == NULL)
-        return;
+    if (min_pos == pos)
+        return pos;
     
-    heap_node_t* left = node->left;
-    heap_node_t* right = node->right;
-
-    heap_free_single_node(node,free_value,ctx);
-    
-    heap_free_node_chain(left,free_value,ctx);
-    heap_free_node_chain(right,free_value,ctx);
-}
-
-static void heap_dump_node_chain(heap_node_t* node,void** dump,int* i)
-{
-    if(node == NULL)
-        return;
-    dump[*i] = node->value;
-    *i = *i + 1;
-    heap_dump_node_chain(node->left,dump,i);
-    heap_dump_node_chain(node->right,dump,i);
+    /** Flip pos and min_pos */
+    void* temp_value = heap->values[pos];
+    heap->values[pos] = heap->values[min_pos];
+    heap->values[min_pos] = temp_value;
+    heap->set_pos(heap->values[pos], pos);
+    heap->set_pos(heap->values[min_pos], min_pos);
+    return heap_adjust_forward(heap, min_pos);
 }
