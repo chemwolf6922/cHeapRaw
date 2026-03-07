@@ -87,6 +87,9 @@ uint64_t get_now_us()
 
 int main(int argc, char const *argv[])
 {
+    (void)argc;
+    (void)argv;
+
     printf("Function test start\n\n");
     function_test();
     printf("\nFunction test End\n\n");
